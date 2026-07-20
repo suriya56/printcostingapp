@@ -1,0 +1,6 @@
+{
+  "name": "Printing Press Quotation Calculator",
+  "description": "A comprehensive full-stack estimation tool for printing press operations, featuring Single and Multi-page calculators, custom cost builders, history management, and a robust Admin pricing dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

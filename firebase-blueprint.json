@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Quotation": {
+      "title": "Quotation",
+      "description": "A printing quotation created by an admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "mode": { "type": "string", "enum": ["A", "B"] },
+        "date": { "type": "string" },
+        "createdBy": { "type": "object" },
+        "inputs": { "type": "object" },
+        "results": { "type": "object" }
+      },
+      "required": ["id", "mode", "date", "createdBy", "inputs", "results"]
+    },
+    "PaperProfile": {
+      "title": "Paper Profile",
+      "description": "Pricing profile for paper materials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "size": { "type": "string" },
+        "gsm": { "type": "number" },
+        "paperType": { "type": "string" },
+        "pricePerFullSheet": { "type": "number" }
+      },
+      "required": ["id", "name", "size", "gsm", "paperType", "pricePerFullSheet"]
+    },
+    "LaminationRate": {
+      "title": "Lamination Rate",
+      "description": "Rate for different lamination types",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ratePerSqInch": { "type": "number" }
+      },
+      "required": ["id", "name", "ratePerSqInch"]
+    },
+    "MiscCost": {
+      "title": "Misc Cost",
+      "description": "Miscellaneous costs like binding and transport",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "cost": { "type": "number" }
+      },
+      "required": ["id", "name", "type", "cost"]
+    },
+    "PlateProfile": {
+      "title": "Plate Profile",
+      "description": "Cost per printing plate",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "cost": { "type": "number" }
+      },
+      "required": ["id", "name", "cost"]
+    },
+    "PrintingBracketsConfig": {
+      "title": "Printing Brackets Config",
+      "description": "Configuration for printing impression brackets",
+      "type": "object",
+      "properties": {
+        "bracket1": { "type": "object" },
+        "bracket2": { "type": "object" },
+        "bracket3": { "type": "object" },
+        "excessStepImpressions": { "type": "number" },
+        "excessStepCost": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/quotations/{quotationId}": {
+      "schema": { "$ref": "#/entities/Quotation" },
+      "description": "The ledger of quotations"
+    },
+    "/papers/{paperId}": {
+      "schema": { "$ref": "#/entities/PaperProfile" },
+      "description": "List of paper profiles"
+    },
+    "/lamination/{laminationId}": {
+      "schema": { "$ref": "#/entities/LaminationRate" },
+      "description": "List of lamination rates"
+    },
+    "/misc-costs/{miscCostId}": {
+      "schema": { "$ref": "#/entities/MiscCost" },
+      "description": "List of miscellaneous costs"
+    },
+    "/plate-profiles/{plateProfileId}": {
+      "schema": { "$ref": "#/entities/PlateProfile" },
+      "description": "List of plate profiles"
+    },
+    "/brackets/main": {
+      "schema": { "$ref": "#/entities/PrintingBracketsConfig" },
+      "description": "Printing brackets configuration"
+    }
+  }
+}

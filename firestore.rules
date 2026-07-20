@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net: Deny all operations by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\\\-]+$'); }
+    function isAdmin() { return isSignedIn() && (request.auth.token.email == 'anithajayasuriya@gmail.com' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'); }
+
+    // --- Schema Blueprints ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'role', 'createdAt']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.role is string && data.role.size() <= 20 &&
+             data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    function isValidPaper(data) {
+      return data.keys().hasAll(['id', 'name', 'size', 'gsm', 'paperType', 'pricePerFullSheet']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.size is string && data.size.size() <= 50 &&
+             data.gsm is number &&
+             data.paperType is string && data.paperType.size() <= 50 &&
+             data.pricePerFullSheet is number;
+    }
+
+    function isValidQuotation(data) {
+      return data.keys().hasAll(['id', 'mode', 'date', 'createdBy', 'inputs', 'results']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.mode is string && data.mode.size() <= 10 &&
+             data.date is string && data.date.size() <= 50 &&
+             data.createdBy is map &&
+             data.inputs is map &&
+             data.results is map;
+    }
+
+    function isValidLamination(data) {
+      return data.keys().hasAll(['id', 'name', 'ratePerSqInch']) &&
+             data.id is string && data.name is string && data.name.size() <= 100 &&
+             data.ratePerSqInch is number;
+    }
+
+    function isValidMiscCost(data) {
+      return data.keys().hasAll(['id', 'name', 'type', 'cost']) &&
+             data.id is string && data.name is string && data.name.size() <= 100 &&
+             data.type is string && data.type.size() <= 50 &&
+             data.cost is number;
+    }
+
+    function isValidPlateProfile(data) {
+      return data.keys().hasAll(['id', 'name', 'cost']) &&
+             data.id is string && data.name is string && data.name.size() <= 100 &&
+             data.cost is number;
+    }
+
+    function isValidBrackets(data) {
+      return data.keys().hasAll(['bracket1', 'bracket2', 'bracket3', 'excessStepImpressions', 'excessStepCost']) &&
+             data.bracket1 is map && data.bracket2 is map && data.bracket3 is map &&
+             data.excessStepImpressions is number && data.excessStepCost is number;
+    }
+
+    // --- Access Control Gates ---
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) && (incoming().role == 'employee' || request.auth.token.email == 'anithajayasuriya@gmail.com');
+      allow update: if isSignedIn() && isValidUser(incoming()) && (
+        (request.auth.uid == userId && incoming().diff(existing()).affectedKeys().hasOnly(['name'])) ||
+        (isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['name', 'email', 'role', 'createdAt']))
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /papers/{paperId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() && isValidId(paperId) && isValidPaper(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /quotations/{quotationId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(quotationId) && isValidQuotation(incoming()) && incoming().createdBy.id == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(quotationId) && isValidQuotation(incoming()) && (existing().createdBy.id == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() && (existing().createdBy.id == request.auth.uid || isAdmin());
+    }
+
+    match /lamination/{laminationId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() && isValidId(laminationId) && isValidLamination(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /misc-costs/{miscId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() && isValidId(miscId) && isValidMiscCost(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /plate-profiles/{plateId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() && isValidId(plateId) && isValidPlateProfile(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /brackets/{bracketId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() && isValidBrackets(incoming());
+      allow delete: if isAdmin();
+    }
+  }
+}

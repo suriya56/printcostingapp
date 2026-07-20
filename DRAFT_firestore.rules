@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // User Validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'role', 'createdAt']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.role is string && data.role.size() <= 20 &&
+             data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    // Paper Validation
+    function isValidPaper(data) {
+      return data.keys().hasAll(['id', 'name', 'size', 'gsm', 'paperType', 'pricePerFullSheet']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.size is string && data.size.size() <= 50 &&
+             data.gsm is number &&
+             data.paperType is string && data.paperType.size() <= 50 &&
+             data.pricePerFullSheet is number;
+    }
+
+    // Quotation Validation
+    function isValidQuotation(data) {
+      return data.keys().hasAll(['id', 'mode', 'date', 'createdBy', 'inputs', 'results']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.mode is string && data.mode.size() <= 10 &&
+             data.date is string && data.date.size() <= 50 &&
+             data.createdBy is map &&
+             data.inputs is map &&
+             data.results is map;
+    }
+
+    // Generic validations for other entities
+    function isValidLamination(data) {
+      return data.keys().hasAll(['id', 'name', 'ratePerSqInch']) &&
+             data.id is string && data.name is string && data.name.size() <= 100 &&
+             data.ratePerSqInch is number;
+    }
+
+    function isValidMiscCost(data) {
+      return data.keys().hasAll(['id', 'name', 'type', 'cost']) &&
+             data.id is string && data.name is string && data.name.size() <= 100 &&
+             data.type is string && data.type.size() <= 50 &&
+             data.cost is number;
+    }
+
+    function isValidPlateProfile(data) {
+      return data.keys().hasAll(['id', 'name', 'cost']) &&
+             data.id is string && data.name is string && data.name.size() <= 100 &&
+             data.cost is number;
+    }
+
+    function isValidBrackets(data) {
+      return data.keys().hasAll(['bracket1', 'bracket2', 'bracket3', 'excessStepImpressions', 'excessStepCost']) &&
+             data.bracket1 is map && data.bracket2 is map && data.bracket3 is map &&
+             data.excessStepImpressions is number && data.excessStepCost is number;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasAny(['name', 'email', 'role', 'createdAt']);
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /papers/{paperId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(paperId) && isValidPaper(incoming());
+      allow update: if isSignedIn() && isValidId(paperId) && isValidPaper(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /quotations/{quotationId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(quotationId) && isValidQuotation(incoming());
+      allow update: if isSignedIn() && isValidId(quotationId) && isValidQuotation(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /lamination/{laminationId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(laminationId) && isValidLamination(incoming());
+      allow update: if isSignedIn() && isValidId(laminationId) && isValidLamination(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /misc-costs/{miscId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(miscId) && isValidMiscCost(incoming());
+      allow update: if isSignedIn() && isValidId(miscId) && isValidMiscCost(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /plate-profiles/{plateId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(plateId) && isValidPlateProfile(incoming());
+      allow update: if isSignedIn() && isValidId(plateId) && isValidPlateProfile(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /brackets/main {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidBrackets(incoming());
+      allow update: if isSignedIn() && isValidBrackets(incoming());
+      allow delete: if isSignedIn();
+    }
+  }
+}
